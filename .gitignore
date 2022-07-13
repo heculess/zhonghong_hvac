@@ -1,0 +1,4 @@
+build/
+dist/
+zhonghong_climate.egg-info/
+zhonghong_climate/__pycache__/
