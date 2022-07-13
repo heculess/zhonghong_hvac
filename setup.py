@@ -3,10 +3,10 @@ import re
 
 from setuptools import setup
 
-from zhonghonghvac.version import __version__
+from zhonghong_climate.version import __version__
 
 setup(
-    name='zhonghonghvac',
+    name='zhonghong_climate',
     version=__version__,
     description='Python library for interfacing with ZhongHong HVAC controller',
     long_description=
@@ -24,8 +24,8 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3 :: Only',
     ],
-    keywords='zhonghong hvac',
-    packages=["zhonghonghvac"],
+    keywords='zhonghong climate hvac',
+    packages=["zhonghong_climate"],
     python_requires='>=3.5',
     install_requires=[
         'attrs',
