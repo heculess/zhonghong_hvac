@@ -1,7 +1,6 @@
 import enum
 import json
 import logging
-import socket
 from typing import Callable, List
 
 from . import hub, protocol

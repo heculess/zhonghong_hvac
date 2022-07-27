@@ -1,6 +1,5 @@
 import copy
 import logging
-import socket
 import struct
 
 from .protocol import (AcData, AcOnline, AcStatus, ChecksumError, CtlStatus,
