@@ -21,6 +21,7 @@ class ZhongHongGateway:
         self.gw_addr = gw_addr
         self.ip_addr = ip_addr
         self.port = port
+        self.available = True
         self.sock = None
         self.ac_callbacks = defaultdict(
             list)  # type DefaultDict[protocol.AcAddr, List[Callable]]
@@ -81,6 +82,7 @@ class ZhongHongGateway:
             except socket.timeout:
                 logger.error("Connot connect to gateway %s:%s", self.ip_addr,
                              self.port)
+                self.available = False
                 return
 
             except OSError as e:
@@ -90,6 +92,7 @@ class ZhongHongGateway:
                     retry_count += 1
                     self.open_socket()
                     _send(retry_count)
+                self.available = False
 
         _send(0)
 
@@ -110,9 +113,11 @@ class ZhongHongGateway:
         except ConnectionResetError:
             logger.debug("Connection reset by peer")
             self.open_socket()
+            self.available = False
 
         except socket.timeout as e:
             logger.error("timeout error", exc_info=e)
+            self.available = False
 
         except OSError as e:
             if e.errno == 9:  # when socket close, errorno 9 will raise
@@ -120,9 +125,11 @@ class ZhongHongGateway:
 
             else:
                 logger.error("unknown error when recv", exc_info=e)
+            self.available = False
 
         except Exception as e:
             logger.error("unknown error when recv", exc_info=e)
+            self.available = False
 
         return None
 
@@ -134,6 +141,7 @@ class ZhongHongGateway:
                 continue
 
             logger.debug("recv data << %s", protocol.bytes_debug_str(data))
+            self.available = True
 
             for ac_data in helper.get_ac_data(data):
                 logger.debug("get ac_data << %s", ac_data)
