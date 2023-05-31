@@ -6,7 +6,6 @@ from collections import defaultdict
 from sys import platform
 from threading import Thread
 from typing import Callable, DefaultDict, List
-
 import attr
 
 from . import helper, protocol
@@ -14,7 +13,6 @@ from . import helper, protocol
 logger = logging.getLogger(__name__)
 
 SOCKET_BUFSIZE = 1024
-
 
 class ZhongHongGateway:
     def __init__(self, ip_addr: str, port: int, gw_addr: int):
@@ -71,28 +69,42 @@ class ZhongHongGateway:
         message.add(ac_addr)
         return self.send(message)
 
+    def update_gw_status(self, status: bool) -> None:
+    	
+        if self.available == status:
+            return
+            
+        self.available = status
+        
+        if not self.available:
+            for addr in self.devices:
+                self.devices[addr].error_code = -1     	                
+                self.devices[addr].call_status_update()
+        
     def send(self, ac_data: protocol.AcData) -> None:
         def _send(retry_count):
             try:
+                if self.sock is None:
+                    self.open_socket()
                 self.sock.settimeout(10.0)
                 logger.debug("send >> %s", ac_data.hex())
                 self.sock.send(ac_data.encode())
                 self.sock.settimeout(None)
 
             except socket.timeout:
-                logger.error("Connot connect to gateway %s:%s", self.ip_addr,
+                logger.debug("Connot connect to gateway %s:%s", self.ip_addr,
                              self.port)
-                self.available = False
+                self.update_gw_status(False)
                 return
 
             except OSError as e:
                 if e.errno == 32:  # Broken pipe
-                    logger.error("OSError 32 raise, Broken pipe", exc_info=e)
+                    logger.debug("OSError 32 raise, Broken pipe", exc_info=e)
                 if retry_count < self.max_retry:
                     retry_count += 1
                     self.open_socket()
                     _send(retry_count)
-                self.available = False
+                self.update_gw_status(False)
 
         _send(0)
 
@@ -104,32 +116,33 @@ class ZhongHongGateway:
         return True
 
     def _get_data(self):
-        if self.sock is None:
-            self.open_socket()
-
+  
         try:
+            if self.sock is None:
+                self.open_socket()
+                
             return self.sock.recv(SOCKET_BUFSIZE)
 
         except ConnectionResetError:
             logger.debug("Connection reset by peer")
             self.open_socket()
-            self.available = False
+            self.update_gw_status(False)
 
         except socket.timeout as e:
-            logger.error("timeout error", exc_info=e)
-            self.available = False
+            logger.debug("timeout error", exc_info=e)
+            self.update_gw_status(False)
 
         except OSError as e:
             if e.errno == 9:  # when socket close, errorno 9 will raise
                 logger.debug("OSError 9 raise, socket is closed")
 
             else:
-                logger.error("unknown error when recv", exc_info=e)
-            self.available = False
+                logger.debug("unknown error when recv", exc_info=e)
+            self.update_gw_status(False)
 
         except Exception as e:
-            logger.error("unknown error when recv", exc_info=e)
-            self.available = False
+            logger.debug("unknown error when recv", exc_info=e)
+            self.update_gw_status(False)
 
         return None
 
@@ -141,7 +154,7 @@ class ZhongHongGateway:
                 continue
 
             logger.debug("recv data << %s", protocol.bytes_debug_str(data))
-            self.available = True
+            self.update_gw_status(True)
 
             for ac_data in helper.get_ac_data(data):
                 logger.debug("get ac_data << %s", ac_data)

@@ -1,6 +1,7 @@
 import enum
 import json
 import logging
+import socket
 from typing import Callable, List
 
 from . import hub, protocol
@@ -25,7 +26,7 @@ class HVAC:
         self.error_code = None
         self.gw.add_device(self)
 
-    def _call_status_update(self):
+    def call_status_update(self):
         for func in self.status_callback:
             if callable(func):
                 func(self)
@@ -46,7 +47,7 @@ class HVAC:
         if dirty:
             logger.debug("[callback]hvac %s status updated: %s", self.ac_addr,
                          self.status())
-            self._call_status_update()
+            self.call_status_update()
         else:
             logger.debug("[callback]hvac %s status remains the same: %s",
                          self.ac_addr, self.status())
@@ -60,7 +61,7 @@ class HVAC:
             self.current_operation = value.name
         elif func_code == protocol.FuncCode.CTL_FAN_MODE:
             self.current_fan_mode = value.name
-        self._call_status_update()
+        self.call_status_update()
 
     def register_update_callback(self, _callable: Callable) -> bool:
         if callable(_callable):
@@ -69,7 +70,10 @@ class HVAC:
         return False
 
     def send(self, ac_data: protocol.AcData) -> None:
-        self.gw.send(ac_data)
+        try:
+            self.gw.send(ac_data)
+        except Exception as e:
+            self.error_code = "lost gateway"
 
     def update(self) -> bool:
         message = protocol.AcData()
