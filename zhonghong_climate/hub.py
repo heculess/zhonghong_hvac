@@ -204,6 +204,12 @@ class ZhongHongGateway:
 
         for thread in self._threads:
             thread.join()
+            
+    def device_in_list(self, addr_out, addr_in, device_list) -> bool:
+        for (item_addr_out, item_addr_in) in device_list:
+            if addr_out == item_addr_out and item_addr_in == addr_in:
+                return True
+        return False
 
     def discovery_ac(self):
         assert not self._listening
@@ -234,11 +240,10 @@ class ZhongHongGateway:
                     logger.debug("header not match: %s != %s",
                                  request_data.header, ac_data.header)
                     continue
-
                 for ac_online in ac_data:
                     assert isinstance(ac_online, protocol.AcOnline)
-                    ret.append((ac_online.addr_out, ac_online.addr_in))
-
+                    if not self.device_in_list(ac_online.addr_out, ac_online.addr_in, ret):
+                        ret.append((ac_online.addr_out, ac_online.addr_in))
                 discovered = True
 
         return ret
